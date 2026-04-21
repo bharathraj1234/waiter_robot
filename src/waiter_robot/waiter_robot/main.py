@@ -22,7 +22,9 @@ class FSMNode(Node):
         self.orders = []
         self.current_order = None
         self.confirmed = None
+
         self.cancelled = False
+        self.cancelled_tables = []
 
         self.has_food = False
         self.skipped_any = False
@@ -47,7 +49,7 @@ class FSMNode(Node):
     # ---------------- CALLBACKS ---------------- #
 
     def order_callback(self, msg):
-        self.orders.append(msg.data)
+        self.orders.append(msg.data.lower())
         self.get_logger().info(f"📥 Order received → {msg.data}")
 
     def confirm_callback(self, msg):
@@ -55,27 +57,32 @@ class FSMNode(Node):
         self.get_logger().info(f"📩 Confirm message → {self.confirmed}")
 
     def cancel_callback(self, msg):
-        self.cancelled = True
-        self.get_logger().warn("❌ Cancel signal received!")
+        data = msg.data.lower()
+
+        if data in self.tables:
+            self.cancelled_tables.append(data)
+            self.get_logger().warn(f"❌ Table cancelled → {data}")
+        else:
+            self.cancelled = True
+            self.get_logger().warn("❌ Global cancel received!")
 
     # ---------------- FSM ---------------- #
 
     def run(self):
 
-        # 🔥 GLOBAL CANCEL HANDLER
+        # 🔥 GLOBAL CANCEL
         if self.cancelled:
-            self.get_logger().warn("🚨 Handling cancel...")
+            self.get_logger().warn("🚨 Handling global cancel...")
 
             if self.moving_to == "KITCHEN":
-                self.get_logger().info("➡️ Cancel during kitchen travel → HOME")
+                self.get_logger().info("➡️ Cancel during kitchen → HOME")
                 self.state = "RETURN_HOME"
 
             elif self.moving_to == "TABLE":
-                self.get_logger().info("➡️ Cancel during table travel → KITCHEN → HOME")
+                self.get_logger().info("➡️ Cancel during table → KITCHEN → HOME")
                 self.state = "RETURN_KITCHEN"
 
             else:
-                self.get_logger().info("➡️ Cancel → HOME")
                 self.state = "RETURN_HOME"
 
             self.cancelled = False
@@ -87,7 +94,11 @@ class FSMNode(Node):
             self.get_logger().info("🟡 Waiting for orders...")
 
             if self.orders:
-                self.get_logger().info("🚀 Order received → Going to kitchen")
+                # 🔥 FIX: reset cancelled tables for new cycle
+                self.cancelled_tables.clear()
+                self.get_logger().info("🧹 Cleared old cancelled tables")
+
+                self.get_logger().info("🚀 Going to kitchen")
 
                 self.moving_to = "KITCHEN"
                 self.navigator.go_to(*self.kitchen)
@@ -99,16 +110,16 @@ class FSMNode(Node):
         # ---------------- WAIT KITCHEN ---------------- #
         elif self.state == "WAIT_KITCHEN":
 
-            self.get_logger().info("🍳 Waiting for kitchen confirmation (yes/no)...")
+            self.get_logger().info("🍳 Waiting for kitchen confirmation...")
 
             if self.confirmed == "yes":
-                self.get_logger().info("✅ Food collected from kitchen")
+                self.get_logger().info("✅ Food collected")
                 self.has_food = True
                 self.skipped_any = False
                 self.state = "NEXT_TABLE"
 
             elif self.confirmed == "no":
-                self.get_logger().warn("❌ Kitchen rejected order → HOME")
+                self.get_logger().warn("❌ Kitchen rejected → HOME")
                 self.orders.clear()
                 self.state = "RETURN_HOME"
 
@@ -120,14 +131,20 @@ class FSMNode(Node):
         # ---------------- NEXT TABLE ---------------- #
         elif self.state == "NEXT_TABLE":
 
+            # Skip cancelled tables
+            while self.orders and self.orders[0] in self.cancelled_tables:
+                skipped = self.orders.pop(0)
+                self.get_logger().warn(f"⏭️ Skipping cancelled table → {skipped}")
+                self.skipped_any = True
+
             if not self.orders:
-                self.get_logger().info("✅ Finished all tables")
+                self.get_logger().info("✅ All tables processed")
 
                 if self.skipped_any:
-                    self.get_logger().info("⚠️ Some tables skipped → Returning kitchen first")
+                    self.get_logger().info("⚠️ Skipped tables → go kitchen first")
                     self.state = "RETURN_KITCHEN"
                 else:
-                    self.get_logger().info("🎉 All delivered → Going HOME")
+                    self.get_logger().info("🎉 All delivered → HOME")
                     self.state = "RETURN_HOME"
                 return
 
@@ -137,7 +154,7 @@ class FSMNode(Node):
                 self.get_logger().warn(f"⚠️ Unknown table {self.current_order}")
                 return
 
-            self.get_logger().info(f"🍽️ Heading to {self.current_order}")
+            self.get_logger().info(f"🍽️ Going to {self.current_order}")
 
             self.moving_to = "TABLE"
             self.navigator.go_to(*self.tables[self.current_order])
@@ -149,21 +166,27 @@ class FSMNode(Node):
         # ---------------- WAIT TABLE ---------------- #
         elif self.state == "WAIT_TABLE":
 
-            self.get_logger().info(f"⏳ Waiting for confirmation at {self.current_order}...")
+            self.get_logger().info(f"⏳ Waiting at {self.current_order}...")
+
+            if self.current_order in self.cancelled_tables:
+                self.get_logger().warn(f"❌ Cancelled while waiting → {self.current_order}")
+                self.skipped_any = True
+                self.state = "NEXT_TABLE"
+                return
 
             if self.confirmed == "yes":
                 self.get_logger().info(f"✅ Delivered → {self.current_order}")
                 self.state = "NEXT_TABLE"
 
             elif time.time() - self.start_time > 8:
-                self.get_logger().warn(f"⌛ No response at {self.current_order} → Skipping")
+                self.get_logger().warn(f"⌛ Timeout → {self.current_order}")
                 self.skipped_any = True
                 self.state = "NEXT_TABLE"
 
         # ---------------- RETURN KITCHEN ---------------- #
         elif self.state == "RETURN_KITCHEN":
 
-            self.get_logger().info("🍳 Returning to kitchen (remaining food)")
+            self.get_logger().info("🍳 Returning to kitchen")
 
             self.navigator.go_to(*self.kitchen)
 
@@ -173,7 +196,7 @@ class FSMNode(Node):
         # ---------------- RETURN HOME ---------------- #
         elif self.state == "RETURN_HOME":
 
-            self.get_logger().info("🏠 Returning to HOME")
+            self.get_logger().info("🏠 Returning home")
 
             self.navigator.go_to(*self.home)
 
