@@ -1,0 +1,134 @@
+<sdf version='1.7'>
+  <world name='restaurant_world'>
+
+    <!-- Light -->
+    <light name='sun' type='directional'>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <!-- Ground -->
+    <model name='ground_plane'>
+      <static>1</static>
+      <link name='link'>
+        <collision name='collision'>
+          <geometry><plane><normal>0 0 1</normal><size>12 12</size></plane></geometry>
+        </collision>
+        <visual name='visual'>
+          <geometry><plane><normal>0 0 1</normal><size>12 12</size></plane></geometry>
+        </visual>
+      </link>
+    </model>
+
+    <!-- WALLS -->
+    <model name='wall_1'>
+      <static>1</static>
+      <pose>0 -5 0 0 0 0</pose>
+      <link name='link'>
+        <collision><geometry><box><size>10 0.2 2</size></box></geometry></collision>
+        <visual><geometry><box><size>10 0.2 2</size></box></geometry></visual>
+      </link>
+    </model>
+
+    <model name='wall_2'>
+      <static>1</static>
+      <pose>0 5 0 0 0 0</pose>
+      <link name='link'>
+        <collision><geometry><box><size>10 0.2 2</size></box></geometry></collision>
+        <visual><geometry><box><size>10 0.2 2</size></box></geometry></visual>
+      </link>
+    </model>
+
+    <model name='wall_3'>
+      <static>1</static>
+      <pose>-5 0 0 0 0 0</pose>
+      <link name='link'>
+        <collision><geometry><box><size>0.2 10 2</size></box></geometry></collision>
+        <visual><geometry><box><size>0.2 10 2</size></box></geometry></visual>
+      </link>
+    </model>
+
+    <model name='wall_4'>
+      <static>1</static>
+      <pose>5 0 0 0 0 0</pose>
+      <link name='link'>
+        <collision><geometry><box><size>0.2 10 2</size></box></geometry></collision>
+        <visual><geometry><box><size>0.2 10 2</size></box></geometry></visual>
+      </link>
+    </model>
+
+    <!-- TABLES -->
+    <!-- Row 1 -->
+    <model name='table1'>
+      <static>1</static>
+      <pose>-2 3 0 0 0 0</pose>
+      <link name='link'>
+        <collision><geometry><box><size>1 1 0.5</size></box></geometry></collision>
+        <visual><geometry><box><size>1 1 0.5</size></box></geometry></visual>
+      </link>
+    </model>
+
+    <model name='table2'>
+      <static>1</static>
+      <pose>0 3 0 0 0 0</pose>
+      <link name='link'>
+        <collision><geometry><box><size>1 1 0.5</size></box></geometry></collision>
+        <visual><geometry><box><size>1 1 0.5</size></box></geometry></visual>
+      </link>
+    </model>
+
+    <model name='table3'>
+      <static>1</static>
+      <pose>2 3 0 0 0 0</pose>
+      <link name='link'>
+        <collision><geometry><box><size>1 1 0.5</size></box></geometry></collision>
+        <visual><geometry><box><size>1 1 0.5</size></box></geometry></visual>
+      </link>
+    </model>
+
+    <!-- Row 2 -->
+    <model name='table4'>
+      <static>1</static>
+      <pose>-1 1 0 0 0 0</pose>
+      <link name='link'>
+        <collision><geometry><box><size>1 1 0.5</size></box></geometry></collision>
+        <visual><geometry><box><size>1 1 0.5</size></box></geometry></visual>
+      </link>
+    </model>
+
+    <model name='table5'>
+      <static>1</static>
+      <pose>1 1 0 0 0 0</pose>
+      <link name='link'>
+        <collision><geometry><box><size>1 1 0.5</size></box></geometry></collision>
+        <visual><geometry><box><size>1 1 0.5</size></box></geometry></visual>
+      </link>
+    </model>
+
+    <!-- KITCHEN -->
+    <model name='kitchen'>
+      <static>1</static>
+      <pose>3 -3 0 0 0 0</pose>
+      <link name='link'>
+        <collision><geometry><box><size>2 2 1</size></box></geometry></collision>
+        <visual><geometry><box><size>2 2 1</size></box></geometry></visual>
+      </link>
+    </model>
+
+    <!-- ROBOT START AREA (visual marker) -->
+    <model name='robot_zone'>
+      <static>1</static>
+      <pose>-3 -3 0 0 0 0</pose>
+      <link name='link'>
+        <visual name='visual'>
+          <geometry><box><size>1 1 0.1</size></box></geometry>
+          <material>
+            <ambient>0 1 0 1</ambient>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>
